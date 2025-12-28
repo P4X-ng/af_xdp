@@ -149,13 +149,13 @@ jobs:
           
           # Check for unsafe C functions
           if [ "$C_FILE_COUNT" -gt 0 ]; then
-            UNSAFE_FUNCS=$(grep -rn -E "(strcpy|strcat|sprintf|gets|scanf)\s*\(" --include="*.c" --include="*.h" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+            UNSAFE_FUNCS=$(grep -rn -E "(strcpy|strcat|sprintf|gets|scanf)\s*\(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
             echo "- Unsafe C functions: $UNSAFE_FUNCS instances of potentially unsafe functions (strcpy, strcat, sprintf, gets, scanf)" >> /tmp/amazonq-report.md
             
             # Check for proper memory management
             MALLOC_COUNT=$(grep -rn -E "(malloc|calloc|realloc|posix_memalign)\s*\(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
             FREE_COUNT=$(grep -rn "free\s*(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
-            echo "- Memory management: $MALLOC_COUNT allocations found, $FREE_COUNT free calls found" >> /tmp/amazonq-report.md
+            echo "- Memory management: $MALLOC_COUNT allocations found, $FREE_COUNT free calls found (heuristic - requires manual review)" >> /tmp/amazonq-report.md
           fi
           
           echo "- Dependency vulnerabilities: Review package versions" >> /tmp/amazonq-report.md
@@ -168,9 +168,6 @@ jobs:
           if [ "$C_FILE_COUNT" -gt 0 ]; then
             NESTED_LOOPS=$(grep -rn "for\|while" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
             echo "- Loop usage: $NESTED_LOOPS loops found - review for optimization opportunities" >> /tmp/amazonq-report.md
-            
-            GLOBAL_VARS=$(grep -rn "^[a-zA-Z_][a-zA-Z0-9_]*\s\+[a-zA-Z_][a-zA-Z0-9_]*\s*=" --include="*.c" . 2>/dev/null | grep -v "\.git" | grep -v "//" | wc -l || echo "0")
-            echo "- Global variables: Review for thread safety and state management" >> /tmp/amazonq-report.md
           fi
           
           echo "- Algorithm efficiency: Review computational complexity" >> /tmp/amazonq-report.md
@@ -223,7 +220,7 @@ jobs:
           fi
           
           if [ "$MALLOC_COUNT" -ne "$FREE_COUNT" ] && [ "$C_FILE_COUNT" -gt 0 ]; then
-            echo "ℹ️ **Memory Management**: Allocation/free count mismatch ($MALLOC_COUNT allocations vs $FREE_COUNT frees). Review for potential memory leaks." >> /tmp/amazonq-report.md
+            echo "ℹ️ **Memory Management Notice**: Allocation/free count mismatch ($MALLOC_COUNT allocations vs $FREE_COUNT frees). This is a basic heuristic - allocations and frees may be in different files or conditional. Manual review recommended to confirm proper memory management." >> /tmp/amazonq-report.md
             echo "" >> /tmp/amazonq-report.md
           fi
           

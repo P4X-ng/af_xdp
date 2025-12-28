@@ -216,7 +216,7 @@ This section will be updated as:
 - Best practices evolve
 - Community provides feedback
 
-**Last Updated:** December 28, 2025
+**Last Updated:** December 28, 2024
 
 ## 📞 Contact
 

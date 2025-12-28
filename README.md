@@ -108,12 +108,14 @@ zgrep CONFIG_XDP /proc/config.gz
 
 ### Tested Hardware
 
-✅ **Recommended NIC:** Intel x540-T2 10G Ethernet Adapter ($160 USD)
+> **Note:** Hardware prices and availability are subject to change. Check current prices and compatibility before purchasing.
+
+✅ **Recommended NIC:** Intel x540-T2 10G Ethernet Adapter (~$160 USD as of Dec 2024)
 - Product: [Intel x540-T2 on Newegg](https://www.newegg.com/intel-x540t2/p/N82E16833106083)
 - Dual port 10G Base-T
 - Full XDP support
 
-✅ **Recommended Switch/Router:** Netgear XS508M 10G Multi-Gigabit Switch ($450 USD)
+✅ **Recommended Switch/Router:** Netgear XS508M 10G Multi-Gigabit Switch (~$450 USD as of Dec 2024)
 - Product: [Netgear XS508M on Newegg](https://www.newegg.com/netgear-xs508m-100nas-7-x-10-gig-multi-gig-copper-ports-1-x-10g-1g-sfp-and-copper/p/N82E16833122954)
 - 8 x 10G ports
 - Low latency

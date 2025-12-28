@@ -84,7 +84,7 @@ Added comprehensive security checks for:
 
 #### Documentation
 - **Main README**: Overview and blog reference
-- **Example READMs**: 8 detailed guides (one per directory)
+- **Example READMEs**: 8 detailed guides (one per directory)
 - **Assessment**: Good documentation coverage
 
 #### Design Patterns

@@ -161,8 +161,8 @@ jobs:
           echo "#### Security Considerations" >> /tmp/amazonq-report.md
           
           # Check for potential hardcoded secrets
-          SECRET_PATTERNS="password\|secret\|api_key\|apikey\|access_key\|private_key\|token\|credential"
-          SECRET_MATCHES=$(grep -r -i "$SECRET_PATTERNS" --include="*.c" --include="*.cpp" --include="*.h" --include="*.hpp" \
+          SECRET_PATTERNS="password|secret|api_key|apikey|access_key|private_key|token|credential"
+          SECRET_MATCHES=$(grep -r -E -i "$SECRET_PATTERNS" --include="*.c" --include="*.cpp" --include="*.h" --include="*.hpp" \
             --include="*.py" --include="*.js" --include="*.ts" --include="*.java" --include="*.go" \
             --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null | wc -l || echo "0")
           
@@ -178,8 +178,8 @@ jobs:
           
           # Check for unsafe C functions
           if [ "$C_FILE_COUNT" -gt 0 ]; then
-            UNSAFE_FUNCS="strcpy\|strcat\|sprintf\|gets\|scanf"
-            UNSAFE_MATCHES=$(grep -r "$UNSAFE_FUNCS" --include="*.c" --include="*.cpp" \
+            UNSAFE_FUNCS="\b(strcpy|strcat|sprintf|gets|scanf)\b"
+            UNSAFE_MATCHES=$(grep -r -E "$UNSAFE_FUNCS" --include="*.c" --include="*.cpp" \
               --exclude-dir=.git 2>/dev/null | wc -l || echo "0")
             
             if [ "$UNSAFE_MATCHES" -gt 0 ]; then
@@ -199,9 +199,9 @@ jobs:
           
           # Check for memory allocation patterns in C/C++
           if [ "$C_FILE_COUNT" -gt 0 ]; then
-            MALLOC_COUNT=$(grep -r "malloc\|calloc\|realloc" --include="*.c" --include="*.cpp" \
+            MALLOC_COUNT=$(grep -r -E "\b(malloc|calloc|realloc|new)\b" --include="*.c" --include="*.cpp" \
               --exclude-dir=.git 2>/dev/null | wc -l || echo "0")
-            FREE_COUNT=$(grep -r "free(" --include="*.c" --include="*.cpp" \
+            FREE_COUNT=$(grep -r -E "\b(free|delete)\b" --include="*.c" --include="*.cpp" \
               --exclude-dir=.git 2>/dev/null | wc -l || echo "0")
             
             echo "- Memory allocation patterns: $MALLOC_COUNT allocations, $FREE_COUNT deallocations" >> /tmp/amazonq-report.md

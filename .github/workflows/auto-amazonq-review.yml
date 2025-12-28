@@ -166,7 +166,7 @@ jobs:
           
           # Check for code complexity indicators
           if [ "$C_FILE_COUNT" -gt 0 ]; then
-            NESTED_LOOPS=$(grep -rn -E "(for|while)" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+            NESTED_LOOPS=$(grep -rn -E "(for\s*\(|while\s*\()" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
             echo "- Loop usage: $NESTED_LOOPS loops found - review for optimization opportunities" >> /tmp/amazonq-report.md
           fi
           

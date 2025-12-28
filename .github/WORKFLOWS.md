@@ -109,10 +109,10 @@ To customize the workflow for your needs:
 #### Security Considerations
 - Credential scanning: 0 potential hardcoded secrets found
 - Unsafe C functions: 0 instances of potentially unsafe functions
-- Memory management: 8 allocations found, 8 free calls found
+- Memory management: 8 allocations found, 8 free calls found (heuristic - requires manual review)
 
 #### Performance Optimization Opportunities
-- Loop usage: 212 loops found - review for optimization opportunities
+- Loop usage: 162 loops found - review for optimization opportunities
 
 #### Architecture and Design Patterns
 - Documentation: 9 README files found

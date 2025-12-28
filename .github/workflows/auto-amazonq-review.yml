@@ -120,30 +120,76 @@ jobs:
           
           # Analyze code structure
           echo "#### Code Structure Analysis" >> /tmp/amazonq-report.md
-          find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.java" -o -name "*.go" \) \
+          find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.java" -o -name "*.go" -o -name "*.c" -o -name "*.h" -o -name "*.cpp" -o -name "*.hpp" \) \
             ! -path "*/node_modules/*" \
             ! -path "*/.venv/*" \
             ! -path "*/dist/*" \
             ! -path "*/build/*" \
+            ! -path "*/.git/*" \
             | wc -l > /tmp/file_count.txt
           
           FILE_COUNT=$(cat /tmp/file_count.txt)
           echo "- Total source files analyzed: $FILE_COUNT" >> /tmp/amazonq-report.md
           echo "" >> /tmp/amazonq-report.md
           
+          # Perform basic security scans for C/C++ code
+          C_FILE_COUNT=$(find . -type f \( -name "*.c" -o -name "*.h" -o -name "*.cpp" -o -name "*.hpp" \) ! -path "*/.git/*" | wc -l)
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            echo "- C/C++ source files found: $C_FILE_COUNT" >> /tmp/amazonq-report.md
+            echo "- Performing security analysis for C/C++ code..." >> /tmp/amazonq-report.md
+            echo "" >> /tmp/amazonq-report.md
+          fi
+          
           echo "#### Security Considerations" >> /tmp/amazonq-report.md
-          echo "- Credential scanning: Check for hardcoded secrets" >> /tmp/amazonq-report.md
+          
+          # Check for hardcoded credentials
+          SECRET_PATTERNS="password|secret|api[_-]?key|token|credential"
+          SECRET_MATCHES=$(grep -rn -iE "$SECRET_PATTERNS" --include="*.c" --include="*.h" --include="*.py" --include="*.js" --include="*.ts" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+          echo "- Credential scanning: $SECRET_MATCHES potential hardcoded secrets found" >> /tmp/amazonq-report.md
+          
+          # Check for unsafe C functions
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            UNSAFE_FUNCS=$(grep -rn -E "(strcpy|strcat|sprintf|gets|scanf)\s*\(" --include="*.c" --include="*.h" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+            echo "- Unsafe C functions: $UNSAFE_FUNCS instances of potentially unsafe functions (strcpy, strcat, sprintf, gets, scanf)" >> /tmp/amazonq-report.md
+            
+            # Check for proper memory management
+            MALLOC_COUNT=$(grep -rn -E "(malloc|calloc|realloc|posix_memalign)\s*\(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+            FREE_COUNT=$(grep -rn "free\s*(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+            echo "- Memory management: $MALLOC_COUNT allocations found, $FREE_COUNT free calls found" >> /tmp/amazonq-report.md
+          fi
+          
           echo "- Dependency vulnerabilities: Review package versions" >> /tmp/amazonq-report.md
           echo "- Code injection risks: Validate input handling" >> /tmp/amazonq-report.md
           echo "" >> /tmp/amazonq-report.md
           
           echo "#### Performance Optimization Opportunities" >> /tmp/amazonq-report.md
+          
+          # Check for code complexity indicators
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            NESTED_LOOPS=$(grep -rn "for\|while" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+            echo "- Loop usage: $NESTED_LOOPS loops found - review for optimization opportunities" >> /tmp/amazonq-report.md
+            
+            GLOBAL_VARS=$(grep -rn "^[a-zA-Z_][a-zA-Z0-9_]*\s\+[a-zA-Z_][a-zA-Z0-9_]*\s*=" --include="*.c" . 2>/dev/null | grep -v "\.git" | grep -v "//" | wc -l || echo "0")
+            echo "- Global variables: Review for thread safety and state management" >> /tmp/amazonq-report.md
+          fi
+          
           echo "- Algorithm efficiency: Review computational complexity" >> /tmp/amazonq-report.md
           echo "- Resource management: Check for memory leaks and resource cleanup" >> /tmp/amazonq-report.md
           echo "- Caching opportunities: Identify repeated computations" >> /tmp/amazonq-report.md
           echo "" >> /tmp/amazonq-report.md
           
           echo "#### Architecture and Design Patterns" >> /tmp/amazonq-report.md
+          
+          # Check for documentation
+          README_COUNT=$(find . -name "README*.md" ! -path "*/.git/*" | wc -l)
+          echo "- Documentation: $README_COUNT README files found" >> /tmp/amazonq-report.md
+          
+          # Check for modular structure
+          HEADER_COUNT=$(find . -name "*.h" ! -path "*/.git/*" | wc -l)
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            echo "- Modular design: $HEADER_COUNT header files for code organization" >> /tmp/amazonq-report.md
+          fi
+          
           echo "- Design patterns usage: Verify appropriate pattern application" >> /tmp/amazonq-report.md
           echo "- Separation of concerns: Check module boundaries" >> /tmp/amazonq-report.md
           echo "- Dependency management: Review coupling and cohesion" >> /tmp/amazonq-report.md
@@ -157,6 +203,29 @@ jobs:
           echo "- Performance optimization suggestions" >> /tmp/amazonq-report.md
           echo "- Enterprise architecture patterns" >> /tmp/amazonq-report.md
           echo "" >> /tmp/amazonq-report.md
+          
+          echo "### Specific Findings Summary" >> /tmp/amazonq-report.md
+          echo "" >> /tmp/amazonq-report.md
+          
+          # Create actionable findings based on the scans
+          if [ "$UNSAFE_FUNCS" -gt 0 ]; then
+            echo "⚠️ **Security Warning**: Found $UNSAFE_FUNCS instances of potentially unsafe C functions. Consider using safer alternatives:" >> /tmp/amazonq-report.md
+            echo "  - Replace \`strcpy\` with \`strncpy\` or \`strlcpy\`" >> /tmp/amazonq-report.md
+            echo "  - Replace \`strcat\` with \`strncat\` or \`strlcat\`" >> /tmp/amazonq-report.md
+            echo "  - Replace \`sprintf\` with \`snprintf\`" >> /tmp/amazonq-report.md
+            echo "  - Never use \`gets\`; use \`fgets\` instead" >> /tmp/amazonq-report.md
+            echo "" >> /tmp/amazonq-report.md
+          fi
+          
+          if [ "$SECRET_MATCHES" -gt 0 ]; then
+            echo "⚠️ **Security Notice**: Found $SECRET_MATCHES potential credential references. Review these to ensure no secrets are hardcoded." >> /tmp/amazonq-report.md
+            echo "" >> /tmp/amazonq-report.md
+          fi
+          
+          if [ "$MALLOC_COUNT" -ne "$FREE_COUNT" ] && [ "$C_FILE_COUNT" -gt 0 ]; then
+            echo "ℹ️ **Memory Management**: Allocation/free count mismatch ($MALLOC_COUNT allocations vs $FREE_COUNT frees). Review for potential memory leaks." >> /tmp/amazonq-report.md
+            echo "" >> /tmp/amazonq-report.md
+          fi
           
           echo "### Next Steps" >> /tmp/amazonq-report.md
           echo "" >> /tmp/amazonq-report.md

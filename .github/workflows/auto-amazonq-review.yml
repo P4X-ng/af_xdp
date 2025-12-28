@@ -154,7 +154,7 @@ jobs:
             
             # Check for proper memory management
             MALLOC_COUNT=$(grep -rn -E "(malloc|calloc|realloc|posix_memalign)\s*\(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
-            FREE_COUNT=$(grep -rn "free\s*(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
+            FREE_COUNT=$(grep -rn -E "free\s*\(" --include="*.c" . 2>/dev/null | grep -v "\.git" | wc -l || echo "0")
             echo "- Memory management: $MALLOC_COUNT allocations found, $FREE_COUNT free calls found (heuristic - requires manual review)" >> /tmp/amazonq-report.md
           fi
           

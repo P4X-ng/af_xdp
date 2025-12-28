@@ -207,8 +207,8 @@ jobs:
           # Create actionable findings based on the scans
           if [ "$UNSAFE_FUNCS" -gt 0 ]; then
             echo "⚠️ **Security Warning**: Found $UNSAFE_FUNCS instances of potentially unsafe C functions. Consider using safer alternatives:" >> /tmp/amazonq-report.md
-            echo "  - Replace \`strcpy\` with \`strncpy\` or \`strlcpy\`" >> /tmp/amazonq-report.md
-            echo "  - Replace \`strcat\` with \`strncat\` or \`strlcat\`" >> /tmp/amazonq-report.md
+            echo "  - Replace \`strcpy\` with \`strncpy\`" >> /tmp/amazonq-report.md
+            echo "  - Replace \`strcat\` with \`strncat\`" >> /tmp/amazonq-report.md
             echo "  - Replace \`sprintf\` with \`snprintf\`" >> /tmp/amazonq-report.md
             echo "  - Never use \`gets\`; use \`fgets\` instead" >> /tmp/amazonq-report.md
             echo "" >> /tmp/amazonq-report.md

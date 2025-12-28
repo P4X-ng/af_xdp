@@ -29,7 +29,6 @@ The Amazon Q Code Review workflow provides automated code quality and security a
 
 #### Performance Analysis
 - Loop detection and counting for optimization opportunities
-- Global variable usage analysis for thread safety considerations
 
 #### Architecture and Design
 - Documentation coverage (README files)

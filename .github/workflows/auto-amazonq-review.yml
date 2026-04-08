@@ -137,33 +137,126 @@ jobs:
           
           # Analyze code structure
           echo "#### Code Structure Analysis" >> /tmp/amazonq-report.md
-          find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.java" -o -name "*.go" \) \
+          find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.java" -o -name "*.go" -o -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) \
             ! -path "*/node_modules/*" \
             ! -path "*/.venv/*" \
             ! -path "*/dist/*" \
             ! -path "*/build/*" \
+            ! -path "*/.git/*" \
             | wc -l > /tmp/file_count.txt
           
           FILE_COUNT=$(cat /tmp/file_count.txt)
           echo "- Total source files analyzed: $FILE_COUNT" >> /tmp/amazonq-report.md
           echo "" >> /tmp/amazonq-report.md
           
+          # Analyze C/C++ code specifically
+          C_FILE_COUNT=$(find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) \
+            ! -path "*/.git/*" | wc -l)
+          
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            echo "- C/C++ source files: $C_FILE_COUNT" >> /tmp/amazonq-report.md
+            echo "" >> /tmp/amazonq-report.md
+            
+            echo "#### C/C++ Specific Security Analysis" >> /tmp/amazonq-report.md
+            echo "- Buffer overflow checks: Review array bounds and string operations" >> /tmp/amazonq-report.md
+            echo "- Memory management: Check for memory leaks and proper cleanup" >> /tmp/amazonq-report.md
+            echo "- NULL pointer dereferences: Validate pointer checks" >> /tmp/amazonq-report.md
+            echo "- Use-after-free vulnerabilities: Review resource lifecycle" >> /tmp/amazonq-report.md
+            echo "- Integer overflow/underflow: Check arithmetic operations" >> /tmp/amazonq-report.md
+            echo "" >> /tmp/amazonq-report.md
+            
+            # Run basic static analysis if tools are available
+            if command -v clang-tidy &> /dev/null; then
+              echo "- Static analysis tool available: clang-tidy" >> /tmp/amazonq-report.md
+            fi
+            if command -v cppcheck &> /dev/null; then
+              echo "- Static analysis tool available: cppcheck" >> /tmp/amazonq-report.md
+            fi
+            echo "" >> /tmp/amazonq-report.md
+          fi
+          
           echo "#### Security Considerations" >> /tmp/amazonq-report.md
+          
+          # Check for potential hardcoded secrets
+          SECRET_PATTERNS="password|secret|api_key|apikey|access_key|private_key|token|credential"
+          SECRET_MATCHES=$(grep -r -E -i "$SECRET_PATTERNS" --include="*.c" --include="*.cpp" --include="*.h" --include="*.hpp" \
+            --include="*.py" --include="*.js" --include="*.ts" --include="*.java" --include="*.go" \
+            --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null | wc -l || echo "0")
+          
+          if [ "$SECRET_MATCHES" -gt 0 ]; then
+            echo "- ⚠️ Potential hardcoded secrets found: $SECRET_MATCHES matches" >> /tmp/amazonq-report.md
+          else
+            echo "- ✓ No obvious hardcoded secrets detected" >> /tmp/amazonq-report.md
+          fi
+          
           echo "- Credential scanning: Check for hardcoded secrets" >> /tmp/amazonq-report.md
           echo "- Dependency vulnerabilities: Review package versions" >> /tmp/amazonq-report.md
           echo "- Code injection risks: Validate input handling" >> /tmp/amazonq-report.md
+          
+          # Check for unsafe C functions
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            UNSAFE_FUNCS="\b(strcpy|strcat|sprintf|gets|scanf)\b"
+            UNSAFE_MATCHES=$(grep -r -E "$UNSAFE_FUNCS" --include="*.c" --include="*.cpp" \
+              --exclude-dir=.git 2>/dev/null | wc -l || echo "0")
+            
+            if [ "$UNSAFE_MATCHES" -gt 0 ]; then
+              echo "- ⚠️ Potentially unsafe C functions found: $UNSAFE_MATCHES uses (strcpy, strcat, sprintf, gets, scanf)" >> /tmp/amazonq-report.md
+              echo "  - Recommendation: Use safer alternatives (strncpy, strncat, snprintf, fgets)" >> /tmp/amazonq-report.md
+            else
+              echo "- ✓ No obvious unsafe C function usage detected" >> /tmp/amazonq-report.md
+            fi
+          fi
+          
           echo "" >> /tmp/amazonq-report.md
           
           echo "#### Performance Optimization Opportunities" >> /tmp/amazonq-report.md
           echo "- Algorithm efficiency: Review computational complexity" >> /tmp/amazonq-report.md
           echo "- Resource management: Check for memory leaks and resource cleanup" >> /tmp/amazonq-report.md
           echo "- Caching opportunities: Identify repeated computations" >> /tmp/amazonq-report.md
+          
+          # Check for memory allocation patterns in C/C++
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            MALLOC_COUNT=$(grep -r -E "\b(malloc|calloc|realloc|new)\b" --include="*.c" --include="*.cpp" \
+              --exclude-dir=.git 2>/dev/null | wc -l || echo "0")
+            FREE_COUNT=$(grep -r -E "\b(free|delete)\b" --include="*.c" --include="*.cpp" \
+              --exclude-dir=.git 2>/dev/null | wc -l || echo "0")
+            
+            echo "- Memory allocation patterns: $MALLOC_COUNT allocations, $FREE_COUNT deallocations" >> /tmp/amazonq-report.md
+            
+            if [ "$MALLOC_COUNT" -gt 0 ] && [ "$FREE_COUNT" -eq 0 ]; then
+              echo "  - ⚠️ Warning: Memory allocations found but no deallocations detected" >> /tmp/amazonq-report.md
+            elif [ "$MALLOC_COUNT" -gt 0 ]; then
+              echo "  - ℹ️ Review memory lifecycle for leaks" >> /tmp/amazonq-report.md
+            fi
+          fi
+          
           echo "" >> /tmp/amazonq-report.md
           
           echo "#### Architecture and Design Patterns" >> /tmp/amazonq-report.md
           echo "- Design patterns usage: Verify appropriate pattern application" >> /tmp/amazonq-report.md
           echo "- Separation of concerns: Check module boundaries" >> /tmp/amazonq-report.md
           echo "- Dependency management: Review coupling and cohesion" >> /tmp/amazonq-report.md
+          
+          # Analyze file structure
+          if [ "$C_FILE_COUNT" -gt 0 ]; then
+            HEADER_COUNT=$(find . -type f \( -name "*.h" -o -name "*.hpp" \) ! -path "*/.git/*" | wc -l)
+            SOURCE_COUNT=$(find . -type f \( -name "*.c" -o -name "*.cpp" \) ! -path "*/.git/*" | wc -l)
+            
+            echo "- Code organization: $HEADER_COUNT header files, $SOURCE_COUNT source files" >> /tmp/amazonq-report.md
+            
+            # Check for Makefiles
+            MAKEFILE_COUNT=$(find . -name "Makefile" -o -name "*.mk" ! -path "*/.git/*" | wc -l)
+            if [ "$MAKEFILE_COUNT" -gt 0 ]; then
+              echo "- Build system: $MAKEFILE_COUNT Makefile(s) found" >> /tmp/amazonq-report.md
+            fi
+            
+            # Check for README files
+            README_COUNT=$(find . -name "README*" -type f ! -path "*/.git/*" | wc -l)
+            if [ "$README_COUNT" -gt 0 ]; then
+              echo "- Documentation: $README_COUNT README file(s) found" >> /tmp/amazonq-report.md
+            fi
+          fi
+          
           echo "" >> /tmp/amazonq-report.md
           
           echo "### Integration with Previous Reviews" >> /tmp/amazonq-report.md
@@ -181,6 +274,17 @@ jobs:
           echo "2. Prioritize issues based on severity and impact" >> /tmp/amazonq-report.md
           echo "3. Create action items for high-priority findings" >> /tmp/amazonq-report.md
           echo "4. Schedule follow-up reviews for resolved items" >> /tmp/amazonq-report.md
+          echo "" >> /tmp/amazonq-report.md
+          
+          echo "### Summary" >> /tmp/amazonq-report.md
+          echo "" >> /tmp/amazonq-report.md
+          echo "This automated review provides a baseline analysis of the codebase." >> /tmp/amazonq-report.md
+          echo "For comprehensive security and performance analysis:" >> /tmp/amazonq-report.md
+          echo "" >> /tmp/amazonq-report.md
+          echo "- Consider running static analysis tools (cppcheck, clang-tidy, valgrind)" >> /tmp/amazonq-report.md
+          echo "- Review all memory allocation/deallocation pairs" >> /tmp/amazonq-report.md
+          echo "- Test with address sanitizer (-fsanitize=address)" >> /tmp/amazonq-report.md
+          echo "- Profile performance with gprof or perf" >> /tmp/amazonq-report.md
           echo "" >> /tmp/amazonq-report.md
           
           # Note: Actual Amazon Q integration would use AWS SDK or CLI
